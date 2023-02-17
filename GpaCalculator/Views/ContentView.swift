@@ -9,21 +9,15 @@ import SwiftUI
 import CoreData
 
 struct ContentView: View {
+    
     @Environment(\.managedObjectContext) private var viewContext
-
     @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Course.name, ascending: true)],
+        sortDescriptors: [
+            NSSortDescriptor(keyPath: \Course.order, ascending: true)],
         animation: .default)
     private var courses: FetchedResults<Course>
-    
-    @State private var editing: Bool = false
-    
-    @State private var showDialog: Bool = false
-    @State private var nameField = ""
-    @State private var gpaField = ""
-    @State private var creditField = ""
+
     @State private var cGpa: String = "0.0"
-    @State private var complete: Bool = false
 
     var body: some View {
         NavigationView {
@@ -37,10 +31,12 @@ struct ContentView: View {
                             }
                         }.listRowBackground(Color.clear)
                         
-                        ForEach(courses) { (course: Course) in
+                        ForEach(courses) { course in
+                            
                             let NameBind = Binding<String>(
                                 get: {course.name!},
-                                set: {course.name = $0}
+                                set: {course.name = $0
+                                    try! viewContext.save()}
                             )
                             
                             let GpaBind = Binding<Float>(
@@ -54,23 +50,15 @@ struct ContentView: View {
                                 set: {course.credit = Int32($0)
                                     updateGpa()}
                             )
-                            HStack() {
-                                TextField("", text: NameBind)
-                                    .multilineTextAlignment(.center)
-                                TextField("", value: GpaBind, formatter: NumberFormatter())
-                                    .keyboardType(.decimalPad)
-                                    .multilineTextAlignment(.center)
-                                TextField("", value: CreditBind, formatter: NumberFormatter())
-                                    .keyboardType(.numberPad)
-                                    .multilineTextAlignment(.center)
-                            }.listRowBackground(Color.clear)
+                            course.view(Name: NameBind, Gpa: GpaBind, Credit: CreditBind)
+                            
                         }.onDelete(perform: deleteItems)
                             .onMove(perform: moveItem)
                     }
                     .navigationTitle("Gpa Calculator")
                     .toolbar {
                         ToolbarItem(placement: .primaryAction)
-                        { Button("Add") {showDialog.toggle()} }
+                        { Button("Add") {addItem()} }
                     }
                     
                     HStack(alignment: .bottom) {
@@ -78,67 +66,64 @@ struct ContentView: View {
                             .foregroundColor(Color(.systemBlue))
                     }.onAppear(perform: updateGpa)
                 }.background(Color(UIColor.clear))
-                if showDialog {
-                    DialogView(active: $showDialog, completed: $complete, nameField: $nameField, gpaField: $gpaField, creditField: $creditField)
-                        .onDisappear { complete ? addItem() : nil }
-                }
             }
+        }.onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
     }
 
+    /*
+    * Adds a new course to coredata and presents associated view
+    */
     private func addItem() {
         withAnimation {
-            @State var name = nameField
-            @State var gpa = Float(gpaField) ?? -1
-            @State var credit = Int(creditField) ?? -1
+            let newCourse = Course(context: viewContext)
+            newCourse.id = UUID()
+            newCourse.order = Int16(courses.count)
             
-            if (!name.isEmpty && (gpa >= 0) && (credit >= 0)) {
-                let newCourse = Course(context: viewContext)
-                newCourse.name = name
-                newCourse.gpa = gpa
-                newCourse.credit = Int32(credit)
-                
-                nameField = ""
-                gpaField = ""
-                creditField = ""
-            }
-
-            do { try viewContext.save() }
-            catch {
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
             updateGpa()
         }
     }
 
+    /*
+    * Removes a course from coredata and associated view
+    */
     private func deleteItems(offsets: IndexSet) {
         withAnimation {
             offsets.map { courses[$0] }.forEach(viewContext.delete)
-
-            do { try viewContext.save() }
-            catch {
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
+            
+            updateGpa()
         }
-        updateGpa()
     }
     
+    /*
+    * Changes order of courses in coredata and in view
+    */
     private func moveItem(source: IndexSet, destination: Int) {
         withAnimation{
-            var revisedItems: [Course] = courses.map {$0}
-            revisedItems.move(fromOffsets: source, toOffset: destination)
-            
-            do { try viewContext.save() }
-            catch {
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+            var sortedOrders: [Int16] = Array(1...Int16(courses.count))
+            for (course, order) in zip(courses, sortedOrders) {
+                course.order = order
             }
+           
+            sortedOrders.move(fromOffsets: source, toOffset: destination)
+            let finalOrders : [Int16] = Array(1...Int16(courses.count))
+            let mappingDict = Dictionary(uniqueKeysWithValues: zip(sortedOrders , finalOrders))
+           
+            for course in courses{
+                course.order = mappingDict[course.order]!
+            }
+            
+            try! viewContext.save()
         }
     }
     
+    /*
+    * Calculates total gpa from all course entities saved in coredata
+    */
     private func updateGpa() {
+        try! viewContext.save()
+        
         var gp = 0.0
         var credits = 0
         for course in courses {
