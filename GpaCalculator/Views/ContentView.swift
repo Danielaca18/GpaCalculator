@@ -75,7 +75,7 @@ struct ContentView: View {
     /*
     * Adds a new course to coredata and presents associated view
     */
-    private func addItem() {
+    public func addItem() {
         withAnimation {
             let newCourse = Course(context: viewContext)
             newCourse.id = UUID()
@@ -88,7 +88,7 @@ struct ContentView: View {
     /*
     * Removes a course from coredata and associated view
     */
-    private func deleteItems(offsets: IndexSet) {
+    public func deleteItems(offsets: IndexSet) {
         withAnimation {
             offsets.map { courses[$0] }.forEach(viewContext.delete)
             
@@ -97,9 +97,18 @@ struct ContentView: View {
     }
     
     /*
+    * Returns courses list
+    * @Returns
+    * Returns fetched results list of courses
+    */
+    public func getItems() -> FetchedResults<Course> {
+        return courses
+    }
+    
+    /*
     * Changes order of courses in coredata and in view
     */
-    private func moveItem(source: IndexSet, destination: Int) {
+    public func moveItem(source: IndexSet, destination: Int) {
         withAnimation{
             var sortedOrders: [Int16] = Array(1...Int16(courses.count))
             for (course, order) in zip(courses, sortedOrders) {
@@ -121,7 +130,7 @@ struct ContentView: View {
     /*
     * Calculates total gpa from all course entities saved in coredata
     */
-    private func updateGpa() {
+    public func updateGpa() {
         try! viewContext.save()
         
         var gp = 0.0
