@@ -33,13 +33,13 @@ final class GpaCalculatorTests: XCTestCase {
             let testCredit = Int.random(in: 1..<10)
             view.addItem()
             let courses = view.getItems()
-            courses[0].name = testName
-            courses[0].gpa = testGpa
-            courses[0].credit = Int32(testCredit)
+            courses[0].Name = testName
+            courses[0].Gpa = testGpa
+            courses[0].Credit = testCredit
             XCTAssertTrue(courses.count == (i+1), "Course was not added successfuly")
-            XCTAssertTrue(courses[i].name == testName, "Course name was not set properly")
-            XCTAssertTrue(courses[i].gpa == testGpa, "Course gpa was not set properly")
-            XCTAssertTrue(courses[i].credit == testCredit, "Course credit was not set properly")
+            XCTAssertTrue(courses[i].Name == testName, "Course name was not set properly")
+            XCTAssertTrue(courses[i].Gpa == testGpa, "Course gpa was not set properly")
+            XCTAssertTrue(courses[i].Credit == testCredit, "Course credit was not set properly")
             
         }
     }

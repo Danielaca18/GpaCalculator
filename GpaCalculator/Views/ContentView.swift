@@ -13,7 +13,7 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @FetchRequest(
         sortDescriptors: [
-            NSSortDescriptor(keyPath: \Course.order, ascending: true)],
+            NSSortDescriptor(key: "order", ascending: true)],
         animation: .default)
     private var courses: FetchedResults<Course>
 
@@ -33,24 +33,8 @@ struct ContentView: View {
                         
                         ForEach(courses) { course in
                             
-                            let NameBind = Binding<String>(
-                                get: {course.name!},
-                                set: {course.name = $0
-                                    try! viewContext.save()}
-                            )
-                            
-                            let GpaBind = Binding<Float>(
-                                get: {course.gpa},
-                                set: {course.gpa = $0
-                                    updateGpa()}
-                            )
-                            
-                            let CreditBind = Binding<Int>(
-                                get: {Int(course.credit)},
-                                set: {course.credit = Int32($0)
-                                    updateGpa()}
-                            )
-                            course.view(Name: NameBind, Gpa: GpaBind, Credit: CreditBind)
+                            let controller = CourseController(course: course)
+                            controller.getView()
                             
                         }.onDelete(perform: deleteItems)
                             .onMove(perform: moveItem)
@@ -79,7 +63,7 @@ struct ContentView: View {
         withAnimation {
             let newCourse = Course(context: viewContext)
             newCourse.id = UUID()
-            newCourse.order = Int16(courses.count)
+            newCourse.Order = courses.count
             
             updateGpa()
         }
@@ -110,17 +94,17 @@ struct ContentView: View {
     */
     public func moveItem(source: IndexSet, destination: Int) {
         withAnimation{
-            var sortedOrders: [Int16] = Array(1...Int16(courses.count))
+            var sortedOrders: [Int] = Array(1...Int(courses.count))
             for (course, order) in zip(courses, sortedOrders) {
-                course.order = order
+                course.Order = order
             }
            
             sortedOrders.move(fromOffsets: source, toOffset: destination)
-            let finalOrders : [Int16] = Array(1...Int16(courses.count))
+            let finalOrders : [Int] = Array(1...Int(courses.count))
             let mappingDict = Dictionary(uniqueKeysWithValues: zip(sortedOrders , finalOrders))
            
             for course in courses{
-                course.order = mappingDict[course.order]!
+                course.Order = mappingDict[course.Order]!
             }
             
             try! viewContext.save()
@@ -136,10 +120,10 @@ struct ContentView: View {
         var gp = 0.0
         var credits = 0
         for course in courses {
-            if course.credit > 0 {
-                gp += Double(Float(course.credit) *
-                             course.gpa)
-                credits += Int(course.credit)
+            if course.Credit > 0 {
+                gp += Double(Float(course.Credit) *
+                             course.Gpa)
+                credits += Int(course.Credit)
             }
         }
         cGpa = courses.count == 0 ? String(0) :

@@ -17,9 +17,9 @@ struct PersistenceController {
         for x in 0..<4 {
             let newCourse = Course(context: viewContext)
             newCourse.id = UUID()
-            newCourse.name = "Course"
-            newCourse.gpa = Float(x)
-            newCourse.credit = Int32(x)
+            newCourse.Name = "Course"
+            newCourse.Gpa = Float(x)
+            newCourse.Credit = x
         }
         do { try viewContext.save() }
         catch {
